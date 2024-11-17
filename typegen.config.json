@@ -1,0 +1,33 @@
+{
+  "$schema": "./src/schema.json",
+  "architecture": "functional",
+  "format": "camelCase",
+  "experimentalResolvers": true,
+  "splitTypings": true,
+  "prettier": true,
+  "postgresql": {
+    "dbConfig": {
+      "user": "postgres",
+      "host": "localhost",
+      "database": "",
+      "password": "password",
+      "port": 5432
+    },
+    "path": "src/__typegen__/postgresql",
+    "experimentals": {
+      "relationships": true
+    }
+  },
+  "mongodb": {
+    "dbConfig": {
+      "host": "localhost",
+      "database": "",
+      "port": 27017
+    },
+    "path": "src/__typegen__/mongodb",
+    "experimentals": {
+      "strict": true,
+      "withTransaction": false
+    }
+  }
+}

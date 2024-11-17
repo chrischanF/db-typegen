@@ -1,0 +1,33 @@
+{
+  "name": "db-typegen",
+  "version": "1.1.2",
+  "description": "A typescript ORM code generator for database sources.",
+  "author": {
+    "name": "Christian Fernandez",
+    "email": "fernandezchristianjerald@gmail.com"
+  },
+  "bin": {
+    "db-typegen": "./src/index.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "pg": "^8.13.0",
+    "dotenv": "^16.4.5",
+    "mongodb": "^6.10.0",
+    "db-typegen-utils": "^1.0.3",
+    "prettier": "^3.3.3"
+  },
+  "keywords": [
+    "db",
+    "database",
+    "data source",
+    "pg",
+    "postgresql",
+    "mongod",
+    "mongodb",
+    "typescript",
+    "typegen",
+    "typegen",
+    "generator"
+  ]
+}

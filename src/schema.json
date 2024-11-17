@@ -1,0 +1,122 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Configuration Schema",
+  "description": "Schema for JSON configuration file",
+  "type": "object",
+  "properties": {
+    "architecture": {
+      "type": "string",
+      "description": "The architecture type, either 'class' or 'functional'",
+      "enum": ["class", "functional"]
+    },
+    "format": {
+      "type": "string",
+      "description": "The naming format, either 'camelCase' or 'snake_case'",
+      "enum": ["camelCase", "snake_case"]
+    },
+    "experimentalResolvers": {
+      "type": "boolean",
+      "description": "When true, creates resolver for each column type instead of a generic resolver. e.g selectUsersById"
+    },
+    "prettier": {
+      "type": "boolean",
+      "description": "Format generated code based on the prettierrc config"
+    },
+    "splitTypings": {
+      "type": "boolean",
+      "description": "When true, it will generate a separate file called 'typings.ts' for the interfaces or types"
+    },
+    "postgresql": {
+      "type": ["object", "boolean"],
+      "description": "PostgreSQL database configuration",
+      "properties": {
+        "dbConfig": {
+          "type": "object",
+          "properties": {
+            "user": {
+              "type": "string",
+              "description": "Database user"
+            },
+            "host": {
+              "type": "string",
+              "description": "Database host"
+            },
+            "database": {
+              "type": "string",
+              "description": "Database name"
+            },
+            "password": {
+              "type": "string",
+              "description": "Database password"
+            },
+            "port": {
+              "type": "integer",
+              "description": "Database port"
+            }
+          },
+          "required": ["user", "host", "database", "password", "port"]
+        },
+        "schemas": {
+          "type": "array",
+          "description": "Specific schema to generate resolver methods",
+          "items": {
+            "type": "string"
+          }
+        },
+        "path": {
+          "type": "string",
+          "description": "Custom directory to save the generated files"
+        },
+        "experimentals": {
+          "type": "object",
+          "properties": {
+            "relationships": {
+              "type": "boolean",
+              "description": "Enable or disable experimental table relationships"
+            }
+          }
+        }
+      },
+      "required": ["dbConfig"]
+    },
+    "mongodb": {
+      "type": ["object", "boolean"],
+      "description": "MongoDB database configuration",
+      "properties": {
+        "dbConfig": {
+          "type": "object",
+          "properties": {
+            "host": {
+              "type": "string",
+              "description": "Database host"
+            },
+            "database": {
+              "type": "string",
+              "description": "Database name"
+            },
+            "port": {
+              "type": "integer",
+              "description": "Database port"
+            }
+          },
+          "required": ["host", "database", "port"]
+        },
+        "path": {
+          "type": "string",
+          "description": "Custom directory to save the generated files"
+        },
+        "experimentals": {
+          "type": "object",
+          "properties": {
+            "strict": {
+              "type": "boolean",
+              "description": "Enable or disable strict typing. When enabled removes safe type for objects and arrays"
+            }
+          }
+        }
+      },
+      "required": ["dbConfig"]
+    }
+  },
+  "required": ["postgresql", "mongodb"]
+}

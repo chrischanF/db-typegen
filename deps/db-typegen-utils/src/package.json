@@ -1,0 +1,31 @@
+{
+  "name": "db-typegen-utils",
+  "version": "1.0.3",
+  "description": " db-typegen package utils",
+  "scripts": {},
+  "keywords": [
+    "db-typegen",
+    "db",
+    "database",
+    "data source",
+    "pg",
+    "postgresql",
+    "mongodb",
+    "typescript",
+    "typegen",
+    "generator"
+  ],
+  "main": "index.js",
+  "types": "index.d.ts",
+  "author": {
+    "name": "Christian Fernandez",
+    "email": "fernandezchristianjerald@gmail.com"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "pg": "^8.13.0",
+    "dotenv": "^16.4.5",
+    "mongodb": "^6.10.0"
+  },
+  "devDependencies": {}
+}

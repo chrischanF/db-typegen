@@ -1,0 +1,38 @@
+{
+  "name": "db-typegen",
+  "version": "1.0.0",
+  "description": "PostgreSQL typescript code generator",
+  "author": {
+    "name": "Christian Fernandez",
+    "email": "fernandezchristianjerald@gmail.com"
+  },
+  "bin": {
+    "pg-typegen": "./index.js"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc --project tsconfig.json && node terser.js",
+    "generate": "NODE_ENV=development npx ts-node src/index.ts"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@potygen/prettier-plugin-pgsql": "^0.3.12",
+    "dotenv": "^16.4.5",
+    "glob": "^11.0.0",
+    "pg": "^8.13.0",
+    "prettier": "^3.3.3",
+    "prettier-plugin-sql": "^0.18.1",
+    "terser": "^5.36.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
+  },
+  "keywords": [
+    "pg",
+    "postgresql",
+    "typegen",
+    "generator"
+  ],
+  "dependencies": {
+    "db-typegen-utils": "^1.0.1",
+    "mongodb": "^6.10.0"
+  }
+}
