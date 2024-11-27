@@ -1,6 +1,4 @@
 {
-  "name": "db-typegen-utils",
-  "version": "1.0.0",
   "description": "db-typegen package utils",
   "scripts": {
     "build": "rm -rf dist && tsc && npm run cp:package.json",

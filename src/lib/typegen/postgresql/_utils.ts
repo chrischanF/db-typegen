@@ -54,7 +54,7 @@ function getExperimentalResolver(schema: string, table: string, relationships: a
   const arg = reservedWords.includes(column) ? `_${column}` : column;
   const select = [
     `
-    export async function select${methodName}<T extends ${typing}['${column}'], O extends FindOptionsPG<T>>(
+    export async function select${methodName}<T extends ${typing}, O extends PGFindOptions<T>>(
     ${arg}?: ${typing}['${column}'],
     options?: O
     ): Promise<SelectResult<T, O> | null> {
@@ -69,7 +69,7 @@ function getExperimentalResolver(schema: string, table: string, relationships: a
           filter: { ${param} },
           relationships: _relationships[${tableVar}]
         }
-      )) as SelectResult<T, O>
+      ));
     }`);
   } else {
     select.push(`
@@ -79,7 +79,7 @@ function getExperimentalResolver(schema: string, table: string, relationships: a
           ...options,
           filter: { ${param} },
         }
-      )  as SelectResult<T, O>;
+      );
     }
       `);
   }
@@ -98,10 +98,11 @@ function generateRequesterMethodV2(tableMeta: any, config: any): string {
   const typing = config.splitTypings === true ? `Typed.${typeName}` : typeName;
   const requester = [];
   // Select
+  const filterType = typing + (config?.postgresql?.experimentals?.strict === false ? ' & AnyObject' : '');
   const select = [
     `
-    export async function select${methodName}<T extends ${typing}, O extends FindOptionsPG<T>>(
-    filter?: Filter<T>,
+    export async function select${methodName}<T extends ${typing}, O extends PGFindOptions<T>>(
+    filter?: Filter<${filterType}>,
     options?: O
     ): Promise<SelectResult<T, O> | null> {
   `,
@@ -116,7 +117,7 @@ function generateRequesterMethodV2(tableMeta: any, config: any): string {
           filter,
           relationships: _relationships[${tableVar}]
         }
-      )) as SelectResult<T, O>
+      ));
     }`);
   } else {
     select.push(`
@@ -126,21 +127,21 @@ function generateRequesterMethodV2(tableMeta: any, config: any): string {
           ...options,
           filter,
         }
-      )  as SelectResult<T, O>;
+      );
     }
       `);
   }
 
   const insert = [
     `
-    export async function insert${methodName}(document: ${typing}): Promise<${typing}> {
+    export async function insert${methodName}(document: ${typing}): Promise<PGInsertResult<${typing}>> {
       return await executeInsert(${tableVar}, document);
     };
   `,
   ];
   const update = [
     `
-    export async function update${methodName}(filter: Partial<${typing}>, document: ${typing}): Promise<${typing}> {
+    export async function update${methodName}(filter: Partial<${typing}>, document: ${typing}): Promise<PGUpdateResult<${typing}>> {
       return await executeUpdate(${tableVar}, filter, document);
     };
   `,
@@ -156,7 +157,7 @@ function generateRequesterMethodV2(tableMeta: any, config: any): string {
 
   const del = [
     `
-    export async function delete${methodName}(filter: Partial<${typing}>): Promise<${typing}> {
+    export async function delete${methodName}(filter: Partial<${typing}>): Promise<PGDeleteResult> {
       return await executeDelete(${tableVar}, filter);
     };
   `,
@@ -193,8 +194,8 @@ function generateRequesterMethod(tableMeta: any, { architecture, format, splitTy
   // Select
   const select = [
     `
-    export async function select${methodName}<T extends ${typing}, O extends FindOptionsPG<T>>(
-    filter: Filter<T> = {},
+    export async function select${methodName}<T extends ${typing}, O extends PGFindOptions<T>>(
+    filter: Filter<${typing}> = {},
     options?: O
     ): Promise<SelectResult<T, O> | null> {
   `,
@@ -207,7 +208,7 @@ function generateRequesterMethod(tableMeta: any, { architecture, format, splitTy
           ...options,
           filter,
         }
-      )) as SelectResult<T, O>;`);
+      ));`);
 
     const relationshipContent = [];
     const relationshipVars = [];
@@ -272,7 +273,7 @@ function generateRequesterMethod(tableMeta: any, { architecture, format, splitTy
   ];
   const update = [
     `
-    export async function update${methodName}(filter: Partial<${typing}>, document: ${typing}): Promise<${typing}> {
+    export async function update${methodName}(filter: Partial<${typing}>, document: Partial<${typing}>): Promise<${typing}> {
       return await executeUpdate(${table.toUpperCase()}, filter, document);
     };
   `,

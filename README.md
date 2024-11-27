@@ -1,4 +1,4 @@
-DB Typegen sauce 
+DB Typegen sauce
 
 ## Prerequisite
 
@@ -14,20 +14,42 @@ Install dependencies
 ## Project structure
 
 deps - Dependency packages
+src - Main db-typegen package
 
 # How to
-- Test changes
-  - `npm run build`
-  - `npx ts-node 'path/datasource/index.ts'`
-    - example: `npx ts-node '__typegen__/postgresql/index.ts`
 
+- Test changes
+
+  - `npm run generate` // This will generate the `index.ts` and related files
+  - `npx ts-node 'path/datasource/index.ts'`
+    - example: `npx ts-node __typegen__/postgresql/index.ts`
+
+- Submit pull request
+  - Don't forget to update [https://github.com/chrischanF/db-typegen/tree/main/src](db-typegen README)
+
+**See** [https://github.com/chrischanF/db-typegen/tree/main/src](db-typegen README) for more
 
 ## Changelog
 
+**1.1.7**
+
+- Added double quote delimiter for tables to avoid clashing with postgresql reserved words
+- Removed `insert`, `update` and `delete` client schema check
+- Improved `experimentalResolver` typings
+- Improved `relationships` resolvers return types
+- Improved `insert` statement return type
+  - Introduced `PGInsertResult<T> - { insertedCount: number; data: T[] }`
+- Improved `update` statement return type
+  - Introduced `PGUpdateResult<T> - { updatedCount: number; data: T[] }`
+- Improved `delete` statement return type
+  - Introduced `PGDeleteResult<T> - { deletedCount: number }`
+- Fixed `db-typegen-utils` import path
+- Fixed undefined error on generate
 
 **1.1.2**
+
 - Removed default query logging
-  - Though still shows when `FindOptionsPG.debug` is `true`
+  - Though still shows when `PGFindOptions.debug` is `true`
 - Fixed `experimentalResolver` methods `filter` args not working
   - Currently supports `=` by default
 

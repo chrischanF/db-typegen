@@ -1,5 +1,4 @@
 {
-  "name": "db-typegen",
   "version": "1.0.0",
   "description": "PostgreSQL typescript code generator",
   "author": {

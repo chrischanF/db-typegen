@@ -30,7 +30,7 @@ export interface Relationship {
   relationship: '1:1' | '1:M';
   relationships?: Relationship[];
 }
-export interface FindOptionsPG<T> {
+export interface PGFindOptions<T> {
   columns?: (keyof T)[];
   limit?: number;
   skip?: number;
@@ -39,11 +39,15 @@ export interface FindOptionsPG<T> {
   relationships?: Relationship[];
 }
 
-export type SelectResult<T, O extends FindOptionsPG<T>> = O extends { debug: true }
+export type SelectResult<T, O extends PGFindOptions<T>> = O extends { debug: true }
   ? { query: string; result: T[] }
   : O['columns'] extends Array<keyof T>
     ? Pick<T, O['columns'][number]>[]
     : T[];
+
+export type PGInsertResult<T> = { insertedCount: number; data: T[] };
+export type PGUpdateResult<T> = { updatedCount: number; data: T[] };
+export type PGDeleteResult = { deletedCount: number };
 
 export const pool = new Pool({
   user: process.env.PG_USER,
@@ -53,14 +57,14 @@ export const pool = new Pool({
   port: +process.env.PG_PORT!,
 });
 
-export async function executeQuery(table: string, options: any = {}) {
+export async function executeQuery<T, O extends PGFindOptions<T>>(table: string, options: any = {}): Promise<SelectResult<T, O> | null> {
   const { query, values } = buildSelectOptions(table, options)!;
   try {
+    if (options?.debug === true) {
+      console.log(`Query: `, { query, values });
+    }
     const response = await pool.query(query, values);
     let result = response.rows;
-    if (options?.debug) {
-      console.log(`Query: `, query);
-    }
     if (options?.relationships?.length) {
       result = result[0].jsonb_agg;
       return options?.debug === true ? { query, result } : result;
@@ -72,12 +76,15 @@ export async function executeQuery(table: string, options: any = {}) {
   return null;
 }
 
-export async function executeInsert<T>(table: string, document: T) {
+export async function executeInsert<T>(table: string, document: T): Promise<PGInsertResult<T>> {
   try {
     const { query, values } = buildInsertQuery(table, document);
     return withTransaction(async (client: PoolClient) => {
       const result = await client.query(query, values);
-      return result.rows[0] || null;
+      return {
+        insertedCount: result.rowCount,
+        data: result.rows,
+      };
     });
   } catch (e) {
     console.error(e.toString());
@@ -85,24 +92,29 @@ export async function executeInsert<T>(table: string, document: T) {
   return null;
 }
 
-export async function executeUpdate<T>(table: string, filter: Partial<T>, document: T) {
+export async function executeUpdate<T>(table: string, filter: Partial<T>, document: T): Promise<PGUpdateResult<T>> {
   try {
     const { query, values } = buildUpdateQuery(table, filter, document);
     return withTransaction(async (client: PoolClient) => {
       const result = await client.query(query, values);
-      return result.rows[0] || null;
+      return {
+        updatedCount: result.rowCount,
+        data: result.rows,
+      };
     });
   } catch (e) {
     console.error(e.toString());
   }
 }
 
-export async function executeDelete<T>(table: string, filter: Partial<T>) {
+export async function executeDelete<T>(table: string, filter: Partial<T>): Promise<PGDeleteResult> {
   try {
     const { query, values } = buildDeleteQuery(table, filter);
     return withTransaction(async (client: PoolClient) => {
       const result = await client.query(query, values);
-      return result.rows[0] || null;
+      return {
+        deletedCount: result.rowCount,
+      };
     });
   } catch (e) {
     console.error(e.toString());
@@ -128,8 +140,8 @@ export function RelationshipSubQuery(schema: string, relationships: Relationship
       query.push(`
       COALESCE((
         SELECT jsonb_agg(row_to_json(${alias})::jsonb)
-        FROM ${schema}.${ftable} AS ${alias}
-        WHERE ${alias}.${fkey} = ${parent || tableAlias}.${tableReferenceKey}
+        FROM ${schema}."${ftable}" AS ${alias}
+        WHERE ${alias}."${fkey}" = ${parent || tableAlias}."${tableReferenceKey}"
       ), '${coalesce}'::jsonb)${parent ? (!isLast || nestedRelationship?.length ? ',' : '') : ` AS ${ftable}${!isLast ? ',' : ''}`}
     `);
     } else {
@@ -138,8 +150,8 @@ export function RelationshipSubQuery(schema: string, relationships: Relationship
         SELECT row_to_json(${alias})::jsonb || jsonb_build_object(
           ${RelationshipSubQuery(schema, nestedRelationship, alias)}
         )
-        FROM ${schema}.${ftable} AS ${alias}
-        WHERE ${alias}.${fkey} = ${parent || tableAlias}.${tableReferenceKey}
+        FROM ${schema}."${ftable}" AS ${alias}
+        WHERE ${alias}."${fkey}" = ${parent || tableAlias}."${tableReferenceKey}"
       ), NULL) ${isLast ? `AS ${ftable}` : ','}
       `);
     }
@@ -176,9 +188,9 @@ export function RelationshipQuery(schema, options): { query: string; values: str
       SELECT
         ${tableAlias}.*,
         ${subQuery}
-      FROM ${schema}.${relationships[0].ltable} ${tableAlias}
+      FROM ${schema}."${relationships[0].ltable}" ${tableAlias}
       ${q}
-      GROUP BY ${tableAlias.charAt(0)}.${relationships[0].lkey}
+      GROUP BY ${tableAlias.charAt(0)}."${relationships[0].lkey}"
       ${queryTail.query}
     )
       SELECT jsonb_agg(row_to_json(table_data)::jsonb)
@@ -198,7 +210,7 @@ export function buildQueryTail(options, counter) {
   const values = [];
   if (sort && !!Object.keys(sort).length) {
     const sortConditions = Object.entries(sort)
-      .map(([key, direction]) => `${key} ${direction}`)
+      .map(([key, direction]) => `"${key}" ${direction}`)
       .join(', ');
     if (sortConditions) {
       query.push(`ORDER BY ${sortConditions}`);
@@ -218,7 +230,7 @@ export function buildQueryTail(options, counter) {
   return { query: query.join('\n'), values };
 }
 
-export function buildSelectOptions<T>(table: string, options: Partial<FindOptionsPG<T> & { filter: Filter<T> }> = {}) {
+export function buildSelectOptions<T>(table: string, options: Partial<PGFindOptions<T> & { filter: Filter<T> }> = {}) {
   if (!options) return null;
   const { filter, limit, skip, sort, columns } = options;
 
@@ -231,13 +243,14 @@ export function buildSelectOptions<T>(table: string, options: Partial<FindOption
   }
 
   const values: any[] = [];
-  const query = [`SELECT ${columns?.length ? columns.join(', ') : '*'} FROM ${table} table_data`];
+  const [s, t] = table.split('.');
+  const query = [`SELECT ${columns?.length ? columns.join(', ') : '*'} FROM ${s}."${t}" table_data`];
   let counter = 1;
 
   if (filter) {
     const whereClause = buildWhereClause(filter, counter);
     if (whereClause.query) {
-      query.push(`WHERE ${whereClause}`);
+      query.push(`WHERE ${whereClause.query}`);
       values.push(...whereClause.values);
       counter += whereClause.counter;
     }
@@ -277,11 +290,11 @@ export function buildWhereClause<T>(filter: Filter<T>, counter: number) {
       for (const [operator, operatorValue] of Object.entries(value as FilterCondition<any>)) {
         const comparison = operatorMap[operator];
         if (!comparison) throw new Error(`Unknown operator: ${operator}`);
-        conditions.push(`table_data.${key} = $${counter++}`);
+        conditions.push(`table_data."${key}" = $${counter++}`);
         values.push(operatorValue);
       }
     } else {
-      conditions.push(`table_data.${key} = $${counter++}`);
+      conditions.push(`table_data."${key}" = $${counter++}`);
       values.push(value);
     }
   }
@@ -295,9 +308,7 @@ function isValidObject(object: unknown): boolean {
 
 export function buildInsertQuery<T>(table: string, document: T): Partial<BuiltQuery> {
   if (!isValidObject(document)) {
-    throw new Error(
-      `Invalid insert data.\nReceived: ${JSON.stringify(document, null, 2)}\nExpecting:\n${JSON.stringify(schema[table], null, 2)}`,
-    );
+    throw new Error(`Invalid insert data.\nReceived: ${JSON.stringify(document, null, 2)}`);
   }
   const columns = Object.keys(document!);
   const values = Object.values(document!);
@@ -309,22 +320,17 @@ export function buildInsertQuery<T>(table: string, document: T): Partial<BuiltQu
 export function buildUpdateQuery<T>(table: string, filter: T, document: T): Partial<BuiltQuery> {
   // Dynamically generate the UPDATE query
   if (!isValidObject(filter)) {
-    throw new Error(
-      `Invalid filter data.\nReceived: ${JSON.stringify(filter, null, 2)}\nExpecting:\nPartial<${JSON.stringify(schema[table], null, 2)}>`,
-    );
+    throw new Error(`Invalid filter data.\nReceived: ${JSON.stringify(filter, null, 2)}`);
   }
   if (!isValidObject(document)) {
-    throw new Error(
-      // @ts-ignore
-      `Invalid update data.\nReceived: ${JSON.stringify(document, null, 2)}\nExpecting:\n${JSON.stringify(schema[table], null, 2)}`,
-    );
+    throw new Error(`Invalid update data.\nReceived: ${JSON.stringify(document, null, 2)}`);
   }
   const docKeys = Object.keys(document!);
   const docValues = Object.values(document!);
   const filterKeys = Object.keys(filter!);
   const filterValues = Object.values(filter!);
   const updateSet = docKeys.map((key, i) => `"${key}" = $${i + 1}`).join(', ');
-  const filterCondition = filterKeys.map((key, i) => `${key} = $${i + docKeys.length + 1}`).join(' AND ');
+  const filterCondition = filterKeys.map((key, i) => `"${key}" = $${i + docKeys.length + 1}`).join(' AND ');
 
   const query = `UPDATE ${table} SET ${updateSet} WHERE ${filterCondition} RETURNING *`;
   return { query, values: docValues.concat(filterValues) };
@@ -332,14 +338,12 @@ export function buildUpdateQuery<T>(table: string, filter: T, document: T): Part
 
 export function buildDeleteQuery<T>(table: string, filter: T) {
   if (!isValidObject(filter)) {
-    throw new Error(
-      // @ts-ignore
-      `Invalid filter data.\nReceived: ${JSON.stringify(filter, null, 2)}\nExpecting:\nPartial<${JSON.stringify(schema[table], null, 2)}>`,
-    );
+    throw new Error(`Invalid filter data.\nReceived: ${JSON.stringify(filter, null, 2)}`);
   }
 
+  const filterKeys = Object.keys(filter!);
   const filterValues = Object.values(filter!);
-  const filterCondition = filterValues.map((key, i) => `${key} = $${i + 1}`).join(' AND ');
+  const filterCondition = filterKeys.map((key, i) => `"${key}" = $${i + 1}`).join(' AND ');
 
   const query = `DELETE FROM ${table} WHERE ${filterCondition}`;
   return { query, values: filterValues };

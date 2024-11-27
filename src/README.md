@@ -87,32 +87,32 @@ This document outlines the configuration schema for the `typegen.config.json` fi
 
 ## Configuration Schema
 
-| Key                                          | Type       | Description                                                                        |
-| -------------------------------------------- | ---------- | ---------------------------------------------------------------------------------- |
-| `architecture`                               | `string`   | Programming style: 'class' or 'functional'.                                        |
-| `format`                                     | `string`   | Naming Convention 'camelCase' or 'snake_case'.                                     |
-| `experimentalResolvers`                      | `boolean`  | Creates methods for every table columns: true or false                             |
-| `prettier`                                   | `boolean`  | Format generated code: true or false                                               |
-| `splitTypings`                               | `boolean`  | Abstract types and interfaces in the `types.ts` file: true or false                |
-| `postgresql`                                 | `object`   | PostgreSQL database configuration.                                                 |
-| `postgresql`.`schemas` (New v1.1)            | `string[]` | Specific schema to generate: ["table_one", "table_two"]                            |
-| `postgresql`.`dbConfig`                      | `object`   | Configuration settings for PostgreSQL database connection: {}                      |
-| `postgresql`.`dbConfig`.`user`               | `string`   | Database user: 'postgres'                                                          |
-| `postgresql`.`dbConfig`.`host`               | `string`   | Database host: 'localhost'                                                         |
-| `postgresql`.`dbConfig`.`database`           | `string`   | Database name: ''                                                                  |
-| `postgresql`.`dbConfig`.`password`           | `string`   | Database password: 'password'                                                      |
-| `postgresql`.`dbConfig`.`port`               | `integer`  | Database port: 5432                                                                |
-| `postgresql`.`path`                          | `string`   | Directory to save the generated files: './src/**typegen**/postgresql'              |
-| `postgresql`.`experimentals`                 | `object`   | Experimental features for PostgreSQL: {}                                           |
-| `postgresql`.`experimentals`.`relationships` | `boolean`  | Include tables constraints / relationships for the `select` methods: true or false |
-| `mongodb`                                    | `object`   | MongoDB database configuration.                                                    |
-| `mongodb`.`dbConfig`                         | `object`   | Configuration settings for MongoDB database connection: {}                         |
-| `mongodb`.`dbConfig`.`host`                  | `string`   | Database host: 'localhost'                                                         |
-| `mongodb`.`dbConfig`.`database`              | `string`   | Database name: ''                                                                  |
-| `mongodb`.`dbConfig`.`port`                  | `integer`  | Database port: 27017                                                               |
-| `mongodb`.`path`                             | `string`   | Directory to save the generated files: './src/**typegen**/mongodb'                 |
-| `mongodb`.`experimentals`                    | `object`   | Experimental features for MongoDB: {}                                              |
-| `mongodb`.`experimentals`.`strict`           | `boolean`  | Strict schema and typings: true or false                                           |
+| Key                                          | Type                  | Description                                                                        |
+| -------------------------------------------- | --------------------- | ---------------------------------------------------------------------------------- |
+| `architecture`                               | `string`              | Programming style: 'class' or 'functional'.                                        |
+| `format`                                     | `string`              | Naming Convention 'camelCase' or 'snake_case'.                                     |
+| `experimentalResolvers`                      | `boolean`             | Creates methods for every table columns: true or false                             |
+| `prettier`                                   | `boolean`             | Format generated code: true or false                                               |
+| `splitTypings`                               | `boolean`             | Abstract types and interfaces in the `types.ts` file: true or false                |
+| `postgresql`                                 | `object`              | PostgreSQL database configuration.                                                 |
+| `postgresql`.`schemas` (New v1.1)            | `string[]`            | Specific schema to generate: ["table_one", "table_two"]                            |
+| `postgresql`.`dbConfig`                      | `object`              | Configuration settings for PostgreSQL database connection: {}                      |
+| `postgresql`.`dbConfig`.`user`               | `string`              | Database user: 'postgres'                                                          |
+| `postgresql`.`dbConfig`.`host`               | `string`              | Database host: 'localhost'                                                         |
+| `postgresql`.`dbConfig`.`database`           | `string`              | Database name: ''                                                                  |
+| `postgresql`.`dbConfig`.`password`           | `string`              | Database password: 'password'                                                      |
+| `postgresql`.`dbConfig`.`port`               | `integer`             | Database port: 5432                                                                |
+| `postgresql`.`path`                          | `string`              | Directory to save the generated files: './src/**typegen**/postgresql'              |
+| `postgresql`.`experimentals`                 | `object`              | Experimental features for PostgreSQL: {}                                           |
+| `postgresql`.`experimentals`.`relationships` | `boolean`             | Include tables constraints / relationships for the `select` methods: true or false |
+| `mongodb`                                    | `object` or `boolean` | MongoDB database configuration.                                                    |
+| `mongodb`.`dbConfig`                         | `object`              | Configuration settings for MongoDB database connection: {}                         |
+| `mongodb`.`dbConfig`.`host`                  | `string`              | Database host: 'localhost'                                                         |
+| `mongodb`.`dbConfig`.`database`              | `string`              | Database name: ''                                                                  |
+| `mongodb`.`dbConfig`.`port`                  | `integer`             | Database port: 27017                                                               |
+| `mongodb`.`path`                             | `string`              | Directory to save the generated files: './src/**typegen**/mongodb'                 |
+| `mongodb`.`experimentals`                    | `object`              | Experimental features for MongoDB: {}                                              |
+| `mongodb`.`experimentals`.`strict`           | `boolean`             | Strict schema and typings: true or false                                           |
 
 ## Usage
 
@@ -156,10 +156,25 @@ Table: users
 
 ## Changelog
 
+**1.1.7**
+
+- Added double quote delimiter for tables to avoid clashing with postgresql reserved words
+- Removed `insert`, `update` and `delete` client schema check
+- Improved `experimentalResolver` typings
+- Improved `relationships` resolvers return types
+- Improved `insert` statement return type
+  - Introduced `PGInsertResult<T> - { insertedCount: number; data: T[] }`
+- Improved `update` statement return type
+  - Introduced `PGUpdateResult<T> - { updatedCount: number; data: T[] }`
+- Improved `delete` statement return type
+  - Introduced `PGDeleteResult<T> - { deletedCount: number }`
+- Fixed `db-typegen-utils` import path
+- Fixed undefined error on generate
 
 **1.1.2**
+
 - Removed default query logging
-  - Though still shows when `FindOptionsPG.debug` is `true`
+  - Though still shows when `PGFindOptions.debug` is `true`
 - Fixed `experimentalResolver` methods `filter` args not working
   - Currently supports `=` by default
 
@@ -176,6 +191,6 @@ Table: users
 
 - Initial release
 
-
 ## Contributing
+
 Raise issue or pull request on: [https://github.com/chrischanF/db-typegen](https://github.com/chrischanF/db-typegen)
