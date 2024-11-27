@@ -53,11 +53,11 @@ const main = async () => {
 
   const mesh = {
     postgresql: await psql(config),
-    mongodb: await mongod(config),
+    mongodb: typeof config?.mongodb === 'object' ? await mongod(config) : null,
   };
 
   for await (const [db, path] of Object.entries(outputs)) {
-    if (!mesh[db].code) continue;
+    if (!mesh[db]?.code) continue;
     if (!fs.existsSync(path)) {
       fs.mkdirSync(path, { recursive: true });
     }

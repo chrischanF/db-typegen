@@ -17,7 +17,7 @@ export default async function main(config: any) {
   });
 
   const schemas = await getSchemas(pool, config);
-  const interfaces = createInterfaces(schemas);
+  const interfaces = createInterfaces(schemas, config);
   const relationshipVars = config.postgresql.experimentals?.relationships === true ? createRelationshipVars(schemas) : '';
   const requesters = createRequesters(schemas, config);
   const tableVariables = createTableVariables(schemas);
@@ -40,23 +40,23 @@ export default async function main(config: any) {
 }
 
 function createUtilImports() {
-  const deps = [
-    `
+  const importPath = process.env.NODE_ENV === 'development' ? `'../../../deps/db-typegen-utils/src'` : `'db-typegen-utils'`;
+  return `
     import {
       Relationship,
       SelectResult,
       executeQuery,
-      FindOptionsPG,
       Filter,
       executeInsert,
       executeUpdate,
       executeDelete,
-    } from
-  `,
-  ];
-
-  process.env.NODE_ENV === 'development' ? deps.push(`'../../../deps/db-typegen-utils/src'`) : deps.push(`'db-typegen-utils'`);
-  return deps;
+      PGFindOptions,
+      PGInsertResult,
+      PGUpdateResult,
+      PGDeleteResult,
+      AnyObject,
+    } from ${importPath}
+  `;
 }
 
 async function getSchemaTableColumns(pool: any, schema: string, table: string) {
@@ -153,7 +153,7 @@ async function getTableRelationships(pool: any, table: string) {
               AND ccu.table_schema = tc.table_schema
       WHERE
           tc.constraint_type = 'FOREIGN KEY'
-          AND ccu.table_name = '${table}'  -- Replace with your actual parent table
+          AND ccu.table_name = '${table}'
   )
   SELECT * FROM foreign_key_info;`,
   );

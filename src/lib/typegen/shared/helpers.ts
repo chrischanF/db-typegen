@@ -19,20 +19,60 @@ export function camelcase(str: string): string {
   return camelCasedWords.join('');
 }
 
+function createRelationshipInterfaces(relationships: any[]) {
+  const columns = [];
+  for (const { ftable, relationships: nestedRelationship, relationship: coalesce } of relationships) {
+    const column: any = {
+      column_name: ftable,
+    };
+
+    if (nestedRelationship?.length) {
+      column.children = createRelationshipInterfaces(nestedRelationship);
+    }
+    column.coalesce = coalesce === '1:M' ? '[]' : '';
+    columns.push(column);
+  }
+
+  return columns;
+}
+
+function mapInterfaces(columns: any[]): any {
+  const obj = [];
+  for (const { column_name, data_type, is_nullable, column_default, children = [], coalesce } of columns) {
+    const nullable = is_nullable?.toLowerCase() === 'yes' || column_default !== null ? '?' : '';
+    let dataType = parseDataType(data_type)?.length > 10 ? 'json' : data_type;
+    if (children?.length || data_type === undefined) {
+      dataType = ucfirst(camelcase(column_name));
+    }
+    if (!obj.includes('\n/* Relationships */\n') && children.length) {
+      obj.push('\n/* Relationships */\n');
+    }
+
+    obj.push(`${column_name}${nullable}:`);
+    if (data_type === undefined || children.length) {
+      obj.push(dataType + coalesce);
+    } else {
+      obj.push(parseDataType(data_type));
+    }
+    obj.push('\n');
+  }
+
+  return obj;
+}
+
 export function createInterfaces(schemas: any, config?: any) {
   const types: Record<string, string[]> = {};
+  const isExperimental = config?.postgresql?.experimentals?.relationships === true;
   for (const schema of schemas) {
-    for (const { table, columns } of schema.tables) {
-      if (!types[table]) {
-        types[table] = [`\n`];
+    for (const { table, columns, relationships } of schema.tables) {
+      let shadowColumns = columns;
+
+      if (isExperimental && relationships?.length) {
+        const relColumns = createRelationshipInterfaces(relationships);
+        shadowColumns = shadowColumns.concat(relColumns);
       }
-      for (const { column_name, data_type, is_nullable, column_default } of columns) {
-        const nullable = is_nullable.toLowerCase() === 'yes' || column_default !== null ? '?' : '';
-        types[table].push(`/* ${parseDataType(data_type).length > 10 ? 'json' : data_type} */`);
-        types[table].push(`\n`);
-        types[table].push(`${column_name}${nullable}: ${parseDataType(data_type)};`);
-        types[table].push(`\n`);
-      }
+
+      types[table] = mapInterfaces(shadowColumns);
     }
   }
 
@@ -43,17 +83,11 @@ export function createInterfaces(schemas: any, config?: any) {
     for (const field of fields) {
       _interface.push(` ${field} `);
     }
-    if (config?.experimentals?.strict !== true) {
-      _interface.push(`/* ignore typesafe */`);
-      _interface.push(`\n`);
-      if (!_interface.includes('[key: string]: any')) {
-        _interface.push(`[key: string]: any`);
-      }
-    }
     _interface.push(`}`);
     interfaces.push(_interface.join(``));
   }
 
+  // process.exit(1);
   return interfaces.join(`\n`);
 }
 

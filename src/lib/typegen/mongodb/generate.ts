@@ -38,6 +38,7 @@ export default async function main(config: any) {
 }
 
 function createUtilImports() {
+  const importPath = process.env.NODE_ENV === 'development' ? `'../../../deps/db-typegen-utils/src'` : `'db-typegen-utils'`;
   return `
     import {
       mongodb,
@@ -48,7 +49,7 @@ function createUtilImports() {
       InsertOptions,
       UpdateOptions
     }
-    from 'db-typegen-utils';
+    from ${importPath};
  `;
 }
 
