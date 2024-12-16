@@ -52,16 +52,19 @@ const main = async () => {
   };
 
   const mesh = {
-    postgresql: await psql(config),
+    postgresql: typeof config?.postgresql === 'object' ? await psql(config) : null,
     mongodb: typeof config?.mongodb === 'object' ? await mongod(config) : null,
   };
 
+  // Write outputs
   for await (const [db, path] of Object.entries(outputs)) {
     if (!mesh[db]?.code) continue;
     if (!fs.existsSync(path)) {
       fs.mkdirSync(path, { recursive: true });
+    } else {
+      fs.rmSync(path, { recursive: true });
+      fs.mkdirSync(path, { recursive: true });
     }
-
     const content = config.prettier === true ? await prettier.format(mesh[db].code, config._prettier) : mesh[db].code;
     fs.writeFileSync(`${path}/${FILENAME}`, content);
     if (config?.splitTypings === true && mesh[db].types) {
@@ -118,6 +121,9 @@ const loadConfig = () => {
   // create .env in root dir
   const dotenvFile = path.resolve(process.cwd(), '.env');
   if (!fs.existsSync(`${dotenvFile}.sample`)) {
+    fs.writeFileSync(`${dotenvFile}.sample`, dotEnvContent.join('\n'));
+  } else {
+    fs.rmSync(`${dotenvFile}.sample`);
     fs.writeFileSync(`${dotenvFile}.sample`, dotEnvContent.join('\n'));
   }
   if (!fs.existsSync(dotenvFile)) {
