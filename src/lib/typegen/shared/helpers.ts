@@ -29,7 +29,10 @@ function createRelationshipInterfaces(relationships: any[]) {
     if (nestedRelationship?.length) {
       column.children = createRelationshipInterfaces(nestedRelationship);
     }
-    column.coalesce = coalesce === '1:M' ? '[]' : '';
+    /**
+     * @deprecated column.coalesce = coalesce === '1:M' ? '[]' : '';
+     */
+    column.coalesce = coalesce === '1:M' ? '[]' : '[]';
     columns.push(column);
   }
 
@@ -38,7 +41,9 @@ function createRelationshipInterfaces(relationships: any[]) {
 
 function mapInterfaces(columns: any[]): any {
   const obj = [];
-  for (const { column_name, data_type, is_nullable, column_default, children = [], coalesce } of columns) {
+  // remove duplicates
+  const uniqueColumns = [...new Map(columns.map((item) => [item.column_name, item])).values()];
+  for (const { column_name, data_type, is_nullable, column_default, children = [], coalesce } of uniqueColumns) {
     const nullable = is_nullable?.toLowerCase() === 'yes' || column_default !== null ? '?' : '';
     let dataType = parseDataType(data_type)?.length > 10 ? 'json' : data_type;
     if (children?.length || data_type === undefined) {
@@ -77,6 +82,7 @@ export function createInterfaces(schemas: any, config?: any) {
   }
 
   const interfaces = [];
+  // remove duplicates
   for (const [table, fields] of Object.entries(types)) {
     const _interface = [];
     _interface.push(`export interface ${ucfirst(camelcase(table))} {`);

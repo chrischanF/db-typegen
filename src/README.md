@@ -156,7 +156,10 @@ Table: users
 
 ## Changelog
 
-**1.1.7**
+**1.1.9**
+- Patched relationship `types` to be `[]`
+
+**1.1.8**
 
 - Added double quote delimiter for tables to avoid clashing with postgresql reserved words
 - Removed `insert`, `update` and `delete` client schema check

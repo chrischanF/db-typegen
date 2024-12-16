@@ -25,22 +25,13 @@ class MongoDBRequester {
   private db: Db;
   private client: MongoClient;
 
-  constructor() {
-    (async () => {
-      await this.connect();
-    })();
-  }
-
-  private async connect() {
+  async connect() {
     const { MONGO_URI, MONGO_HOST = 'localhost', MONGO_PORT = 27017, MONGO_DATABASE } = process.env;
     this.client = await MongoClient.connect(MONGO_URI || `mongodb://${MONGO_HOST}:${MONGO_PORT}`);
     this.db = this.client.db(MONGO_DATABASE);
   }
-  async select<T extends Document>(
-    collectionName: string,
-    filter: Filter<T> = {},
-    options: FindOptions<T> = {},
-  ): Promise<T[]> {
+
+  async select<T extends Document>(collectionName: string, filter: Filter<T> = {}, options: FindOptions<T> = {}): Promise<T[]> {
     if (!this.db) await this.connect();
     const collection = this.db.collection(collectionName);
 
@@ -83,11 +74,7 @@ class MongoDBRequester {
 
     if (!withTransaction) {
       if (!this.db) await this.connect();
-      return (await this.insertDocument<typeof document>(
-        this.db.collection(collectionName),
-        document,
-        insertOptions,
-      )) as T;
+      return (await this.insertDocument<typeof document>(this.db.collection(collectionName), document, insertOptions)) as T;
     }
     return await this.withTransaction(async (session, db) => {
       return (await this.insertDocument<typeof document>(this.db.collection(collectionName), document, {

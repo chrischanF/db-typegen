@@ -42,9 +42,14 @@ export function createSchemaMeta(schemas: any) {
 
 function getExperimentalResolver(schema: string, table: string, relationships: any, column: string, config) {
   // Select
+  const isUpperCaseCol = column === column.toUpperCase();
   let methodName = config.format === 'camelCase' ? ucfirst(camelcase(table)) : `_${table}`;
   if (column) {
-    methodName = methodName + (config.format === 'camelCase' ? `By${ucfirst(camelcase(column))}` : `_by_${column}`);
+    if (!isUpperCaseCol) {
+      methodName = methodName + (config.format === 'camelCase' ? `By${ucfirst(camelcase(column))}` : `_by_${column}`);
+    } else {
+      methodName = methodName + (config.format === 'camelCase' ? `By${column}` : `by_${column}`);
+    }
   }
   const typeName = ucfirst(camelcase(table));
   const typing = config.splitTypings === true ? `Typed.${typeName}` : typeName;
@@ -148,7 +153,7 @@ function generateRequesterMethodV2(tableMeta: any, config: any): string {
   ];
   // columns
   if (config.experimentalResolvers === true) {
-    const uniqueColumns: string[] = [...new Set(columns.map(({ column_name }) => column_name.toLowerCase()))] as string[];
+    const uniqueColumns: string[] = [...new Set(columns.map(({ column_name }) => column_name))] as string[];
     for (const col of uniqueColumns) {
       const experimentalResolver = getExperimentalResolver(schema, table, relationships, col, config);
       select.push(experimentalResolver);
@@ -176,123 +181,6 @@ function generateRequesterMethodV2(tableMeta: any, config: any): string {
       .replaceAll(`insert${methodName}`, 'insert')
       .replaceAll(`update${methodName}`, 'update')
       .replaceAll(`delete${methodName}`, 'delete');
-  }
-  return requester.join(`\n`);
-}
-
-/**
- * @deprecated use generateRequesterMethodV2
- * Generate a Requester method for each table
- * @returns resolvers (slow)
- */
-function generateRequesterMethod(tableMeta: any, { architecture, format, splitTypings, postgresql, experimentalResolvers }: any): string {
-  const { table, relationships } = tableMeta;
-  const methodName = format === 'camelCase' ? ucfirst(camelcase(table)) : `_${table}`;
-  const typeName = ucfirst(camelcase(table));
-  const requester = [];
-  const typing = splitTypings === true ? `Typed.${typeName}` : typeName;
-  // Select
-  const select = [
-    `
-    export async function select${methodName}<T extends ${typing}, O extends PGFindOptions<T>>(
-    filter: Filter<${typing}> = {},
-    options?: O
-    ): Promise<SelectResult<T, O> | null> {
-  `,
-  ];
-  if (postgresql?.experimentals?.relationships === true && relationships?.length) {
-    select.push(`
-      let ${table} = (await executeQuery(
-        ${table.toUpperCase()},
-        {
-          ...options,
-          filter,
-        }
-      ));`);
-
-    const relationshipContent = [];
-    const relationshipVars = [];
-    const relationshipSelector = [];
-    const relationshipAssignment = [];
-    for (const { ftable, fkey, lkey, relationships: nestedRelationship, relationship } of relationships) {
-      let ftableName = 'get' + (format === 'camelCase' ? ucfirst(camelcase(ftable)) : `_${ftable}`);
-      if (architecture === 'class') {
-        ftableName = `${ucfirst(camelcase(ftable))}.select`;
-      }
-      relationshipVars.push(ftable);
-      relationshipSelector.push(`
-          ${ftableName}({ ${fkey}: result.${lkey} })
-        `);
-      relationshipAssignment.push(`
-            result.${ftable} = ${ftable}${relationship === '1:1' ? '?.[0]' : ''};
-        `);
-
-      nestedRelationship &&
-        select.push(`
-          /**\n
-          * ${JSON.stringify(relationships)}\n
-          */
-        `);
-    }
-    relationshipContent.push(`
-          const [${relationshipVars.join(', ')}] = await Promise.all([${relationshipSelector.join(', ')}])
-
-      `);
-    relationshipContent.push(relationshipAssignment.join(`;`));
-    select.push(`
-      if (Array.isArray(${table})) {
-        ${table} = await Promise.all(${table}.map(async(result) => {
-          ${relationshipContent.join('\n')}
-          return result;
-        })) as any;
-      }
-        `);
-    select.push(`
-      return ${table};
-    };
-  `);
-  } else {
-    select.push(`
-      return await executeQuery(
-        ${table.toUpperCase()},
-        {
-          ...options,
-          filter,
-        }
-      );
-    }
-      `);
-  }
-
-  const insert = [
-    `
-    export async function insert${methodName}(document: ${typing}): Promise<${typing}> {
-      return await executeInsert(${table.toUpperCase()}, document);
-    };
-  `,
-  ];
-  const update = [
-    `
-    export async function update${methodName}(filter: Partial<${typing}>, document: Partial<${typing}>): Promise<${typing}> {
-      return await executeUpdate(${table.toUpperCase()}, filter, document);
-    };
-  `,
-  ];
-
-  if (experimentalResolvers === true) {
-  }
-
-  requester.push(select.join('\n'));
-  requester.push(insert.join('\n'));
-  requester.push(update.join('\n'));
-
-  if (architecture === 'class') {
-    return requester
-      .join(`\n`)
-      .replaceAll('export async function', 'public static async')
-      .replaceAll(`select${methodName}`, 'select')
-      .replaceAll(`insert${methodName}`, 'insert')
-      .replaceAll(`update${methodName}`, 'update');
   }
   return requester.join(`\n`);
 }
